@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Order>
+  <Header>
+    <OrderId>PO-10042</OrderId>
+    <GeneratedAt>2026-05-28T11:45:00Z</GeneratedAt>
+    <Endpoint>https://new.example.com/api/orders/PO-10042</Endpoint>
+  </Header>
+  <Items>
+    <Item sku="A-100" quantity="3">
+      <Name>Alignment Sensor</Name>
+      <Status>Ready</Status>
+    </Item>
+    <Item sku="B-200" quantity="1">
+      <Name>Calibration Kit</Name>
+      <Status>Released</Status>
+    </Item>
+  </Items>
+</Order>
