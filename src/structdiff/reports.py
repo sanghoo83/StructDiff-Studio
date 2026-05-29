@@ -2,7 +2,7 @@
 StructDiff Studio
 Author: Noah Nam
 Contact: n83.noah@gmail.com
-Version: 0.2.0
+Version: 0.3.0
 Purpose: HTML dashboard and side-by-side report generation.
 """
 
@@ -11,6 +11,55 @@ import os
 
 
 class ReportWriterMixin:
+    def write_structural_summary(self, out, summary):
+        if not summary:
+            return
+
+        out.write("<section class='struct-summary'>")
+        out.write("<h3>Structural Change Summary</h3>")
+
+        if not summary.get("available", False):
+            out.write(f"<p class='summary-error'>Summary unavailable: {py_html.escape(summary.get('error', 'unknown error'))}</p>")
+            out.write("</section>")
+            return
+
+        counts = summary.get("counts", {})
+        count_labels = [
+            ("Nodes added", counts.get("nodes_added", 0)),
+            ("Nodes removed", counts.get("nodes_removed", 0)),
+            ("Attributes added", counts.get("attrs_added", 0)),
+            ("Attributes removed", counts.get("attrs_removed", 0)),
+            ("Attributes changed", counts.get("attrs_changed", 0)),
+            ("Text added", counts.get("texts_added", 0)),
+            ("Text removed", counts.get("texts_removed", 0)),
+            ("Text changed", counts.get("texts_changed", 0)),
+        ]
+        out.write("<div class='summary-grid'>")
+        for label, value in count_labels:
+            out.write(f"<div class='summary-card'><span>{py_html.escape(label)}</span><strong>{value}</strong></div>")
+        out.write("</div>")
+
+        items = summary.get("items", [])
+        if not items:
+            out.write("<p class='summary-empty'>No node, attribute, or text-level changes were classified.</p>")
+            out.write("</section>")
+            return
+
+        out.write("<table class='summary-table'>")
+        out.write("<thead><tr><th>Type</th><th>Path</th><th>Name</th><th>v1</th><th>v2</th></tr></thead><tbody>")
+        for item in items:
+            out.write("<tr>")
+            out.write(f"<td>{py_html.escape(item.get('type', ''))}</td>")
+            out.write(f"<td class='path'>{py_html.escape(item.get('path', ''))}</td>")
+            out.write(f"<td>{py_html.escape(item.get('name', ''))}</td>")
+            out.write(f"<td>{py_html.escape(str(item.get('left', '')))}</td>")
+            out.write(f"<td>{py_html.escape(str(item.get('right', '')))}</td>")
+            out.write("</tr>")
+        out.write("</tbody></table>")
+        if summary.get("truncated"):
+            out.write("<p class='summary-note'>Summary truncated. Open the line diff below for full context.</p>")
+        out.write("</section>")
+
     def parse_diff_to_side_by_side_html(self, diff_text, file_left, file_right, v1_label, v2_label):
         lines = diff_text.splitlines() if isinstance(diff_text, str) else diff_text
         table_html = []
@@ -143,7 +192,7 @@ class ReportWriterMixin:
 
         out.write("</table><br>")
 
-    def write_part_html_report(self, report_path, diff_lines, file_left, file_right, v1_label, v2_label, title):
+    def write_part_html_report(self, report_path, diff_lines, file_left, file_right, v1_label, v2_label, title, structural_summary=None):
         with open(report_path, 'w', encoding='utf-8') as out:
             out.write(f"""
         <!DOCTYPE html>
@@ -161,6 +210,17 @@ class ReportWriterMixin:
                 td.del {{ background-color: #ffeef0; color: #b31412; }}
                 td.add {{ background-color: #e6ffed; color: #22863a; }}
                 tr.info td {{ background-color: #f1f8ff; color: #0366d6; padding: 4px 10px; font-style: italic; border-top: 1px solid #dbedff; border-bottom: 1px solid #dbedff; }}
+                .struct-summary {{ background: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 14px; margin: 12px 0 18px; }}
+                .struct-summary h3 {{ margin: 0 0 10px; font-size: 14px; color: #1d1d1f; }}
+                .summary-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; margin-bottom: 12px; }}
+                .summary-card {{ background: #f8f9fa; border: 1px solid #edf0f2; border-radius: 6px; padding: 8px; }}
+                .summary-card span {{ display: block; color: #6c757d; font-size: 11px; }}
+                .summary-card strong {{ display: block; color: #1d1d1f; font-size: 18px; margin-top: 2px; }}
+                table.summary-table {{ width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }}
+                table.summary-table th {{ background: #f1f3f5; }}
+                table.summary-table td {{ border: 1px solid #f1f3f5; vertical-align: top; }}
+                table.summary-table td.path {{ color: #0056b3; font-family: Consolas, monospace; }}
+                .summary-empty, .summary-note, .summary-error {{ color: #6c757d; font-size: 12px; margin: 8px 0 0; }}
                 .floating-creator-badge {{ position: fixed; bottom: 20px; right: 20px; background-color: rgba(29, 29, 31, 0.75); color: #ffffff; padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.15); backdrop-filter: blur(4px); cursor: pointer; user-select: none; transition: all 0.2s ease-in-out; z-index: 9999; }}
                 .floating-creator-badge:hover {{ background-color: rgba(0, 113, 227, 0.95); transform: translateY(-2px); }}
             </style>
@@ -168,6 +228,7 @@ class ReportWriterMixin:
         <body>
             <h2>Segment Slice View: {py_html.escape(title)}</h2>
             """)
+            self.write_structural_summary(out, structural_summary)
             self.write_side_by_side_diff_table(out, diff_lines, file_left, file_right, v1_label, v2_label)
             out.write("""
             <div class="floating-creator-badge">

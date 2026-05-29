@@ -2,7 +2,7 @@
 StructDiff Studio
 Author: Noah Nam
 Contact: n83.noah@gmail.com
-Version: 0.2.0
+Version: 0.3.0
 Purpose: Reusable Tkinter widgets used by the desktop UI.
 """
 

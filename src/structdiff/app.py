@@ -2,7 +2,7 @@
 StructDiff Studio
 Author: Noah Nam
 Contact: n83.noah@gmail.com
-Version: 0.2.0
+Version: 0.3.0
 Purpose: Tkinter application shell and batch comparison workflow.
 """
 
@@ -260,7 +260,7 @@ class StructDiffStudioApp(CompareEngineMixin, ReportWriterMixin):
             v2_str = self._get_xml_version(self.path_right, self.type_right, sample_r) or "v2"
             
             self.tree.insert("", "end", iid=str(i), 
-                             values=(f"[{prefix}][{ext_str}]", "[Ready]", f"({v1_str}: {l_count} | {v2_str}: {r_count})"), 
+                             values=(f"[{prefix}][{ext_str}]", "⏳ [Ready]", f"({v1_str}: {l_count} | {v2_str}: {r_count})"), 
                              tags=('ready',))
 
     def _process_selected_items_thread(self, selected_iids, output_dir, mode="single"):
@@ -289,7 +289,7 @@ class StructDiffStudioApp(CompareEngineMixin, ReportWriterMixin):
             has_any_structural_mismatch = False
 
             def update_ui_split(i=idx_str, name=disp_name):
-                self.tree.item(i, values=(name, "Splitting...", f"({v1_str}: {l_count} | {v2_str}: {r_count})"), tags=('analyzing',))
+                self.tree.item(i, values=(name, "✂️ Splitting...", f"({v1_str}: {l_count} | {v2_str}: {r_count})"), tags=('analyzing',))
             self.root.after(0, update_ui_split)
 
             for f_left, f_right in zip(self.left_dict[prefix], self.right_dict[prefix]):
@@ -328,12 +328,16 @@ class StructDiffStudioApp(CompareEngineMixin, ReportWriterMixin):
                     self._log_timing(f"{f_left} vs {f_right} total", pair_start)
                     continue
 
+                summary_start = time.perf_counter()
+                structural_summary = self.build_structural_change_summary(f_left, f_right)
+                self._log_timing(f"{f_left} vs {f_right} structural summary", summary_start)
+
                 chunks1 = self.split_memory_lines_to_bytes_chunks(lines1, max_bytes=20971520)
                 chunks2 = self.split_memory_lines_to_bytes_chunks(lines2, max_bytes=20971520)
                 max_chunks = max(len(chunks1), len(chunks2))
 
                 for chunk_idx in range(max_chunks):
-                    status_text = f"Diffing ({chunk_idx+1}/{max_chunks})..."
+                    status_text = f"⚡ Diffing ({chunk_idx+1}/{max_chunks})..."
                     def update_ui_diff(i=idx_str, name=disp_name, st=status_text):
                         self.tree.item(i, values=(name, st, f"({v1_str}: {l_count} | {v2_str}: {r_count})"), tags=('analyzing',))
                     self.root.after(0, update_ui_diff)
@@ -376,7 +380,8 @@ class StructDiffStudioApp(CompareEngineMixin, ReportWriterMixin):
                             f_right,
                             v1_str,
                             v2_str,
-                            f"{f_left} (Part {chunk_idx+1})"
+                            f"{f_left} (Part {chunk_idx+1})",
+                            structural_summary if chunk_idx == 0 else None
                         )
                         self._log_timing(f"{f_left} vs {f_right} part {chunk_idx+1} report", report_start)
 
@@ -390,21 +395,21 @@ class StructDiffStudioApp(CompareEngineMixin, ReportWriterMixin):
             if has_any_structural_mismatch:
                 diff_count += 1
                 def update_ui_index(i=idx_str, name=disp_name):
-                    self.tree.item(i, values=(name, "Indexing...", f"({v1_str}: {l_count} | {v2_str}: {r_count})"), tags=('analyzing',))
+                    self.tree.item(i, values=(name, "✍️ Indexing...", f"({v1_str}: {l_count} | {v2_str}: {r_count})"), tags=('analyzing',))
                 self.root.after(0, update_ui_index)
 
                 self.write_index_dashboard(group_folder_path, prefix, results_meta_collection, current_time_str, v1_str, v2_str)
 
                 def update_ui_success(i=idx_str, name=disp_name):
-                    self.tree.item(i, values=(name, "[Different]", f"({v1_str}: {l_count} | {v2_str}: {r_count})"), tags=('different',))
+                    self.tree.item(i, values=(name, "✅ [Different]", f"({v1_str}: {l_count} | {v2_str}: {r_count})"), tags=('different',))
                 self.root.after(0, update_ui_success)
             else:
                 def update_ui_nodiff(i=idx_str, name=disp_name):
-                    self.tree.item(i, values=(name, "[Identical]", f"({v1_str}: {l_count} | {v2_str}: {r_count})"), tags=('identical',))
+                    self.tree.item(i, values=(name, "➖ [Identical]", f"({v1_str}: {l_count} | {v2_str}: {r_count})"), tags=('identical',))
                 self.root.after(0, update_ui_nodiff)
 
         def finish_work():
-            msg = f"Completed {total_items} group comparisons.\n\nMismatched folders generated inside target path:\n{output_dir}"
+            msg = f"✅ Completed {total_items} group comparisons!\n\nMismatched folders generated inside target path:\n{output_dir}"
             messagebox.showinfo("Complete", msg)
             self.btn_single.config("normal")
             self.btn_batch.config("normal")

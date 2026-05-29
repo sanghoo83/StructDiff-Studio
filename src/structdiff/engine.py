@@ -2,7 +2,7 @@
 StructDiff Studio
 Author: Noah Nam
 Contact: n83.noah@gmail.com
-Version: 0.2.0
+Version: 0.3.0
 Purpose: File loading, XML normalization, hashing, and diff engine selection.
 """
 
@@ -31,6 +31,9 @@ from .resources import app_resource_path
 
 
 class CompareEngineMixin:
+    def _local_tag_name(self, tag):
+        return str(tag).split('}')[-1]
+
     def _normalize_text(self, text):
         if not text:
             return text
@@ -107,6 +110,130 @@ class CompareEngineMixin:
         except Exception as e:
             print(f"[{left_file} vs {right_file}] Structural hash skipped: {e}")
             return False
+
+    def _collect_structural_records(self, base_path, base_type, file_name):
+        nodes = set()
+        attrs = {}
+        texts = {}
+        is_html = file_name.lower().endswith(('.html', '.htm'))
+
+        with self._open_binary_source(base_path, base_type, file_name) as f:
+            context = etree.iterparse(f, events=('start', 'end'), recover=True, html=is_html)
+            path_stack = []
+            sibling_counts_stack = [{}]
+
+            for event, elem in context:
+                tag_name = self._local_tag_name(elem.tag)
+                if event == 'start':
+                    counts = sibling_counts_stack[-1]
+                    counts[tag_name] = counts.get(tag_name, 0) + 1
+                    path = "/" + "/".join(path_stack + [f"{tag_name}[{counts[tag_name]}]"])
+                    path_stack.append(f"{tag_name}[{counts[tag_name]}]")
+                    sibling_counts_stack.append({})
+                    nodes.add(path)
+
+                    for attr_name, attr_value in sorted(elem.attrib.items()):
+                        attrs[(path, attr_name)] = self._normalize_text(attr_value)
+
+                elif event == 'end':
+                    if path_stack:
+                        path = "/" + "/".join(path_stack)
+                        if elem.text and elem.text.strip():
+                            texts[path] = self._normalize_text(elem.text.strip())
+                        path_stack.pop()
+                    if len(sibling_counts_stack) > 1:
+                        sibling_counts_stack.pop()
+
+                    elem.clear()
+                    if elem.getparent() is not None:
+                        while elem.getprevious() is not None:
+                            del elem.getparent()[0]
+
+        return {"nodes": nodes, "attrs": attrs, "texts": texts}
+
+    def build_structural_change_summary(self, left_file, right_file, max_items=160):
+        try:
+            left = self._collect_structural_records(self.path_left, self.type_left, left_file)
+            right = self._collect_structural_records(self.path_right, self.type_right, right_file)
+        except Exception as e:
+            print(f"[{left_file} vs {right_file}] Structural summary skipped: {e}")
+            return {"available": False, "error": str(e), "items": [], "counts": {}}
+
+        items = []
+
+        def add_item(change_type, path, name="", left_value="", right_value=""):
+            if len(items) < max_items:
+                items.append({
+                    "type": change_type,
+                    "path": path,
+                    "name": name,
+                    "left": left_value,
+                    "right": right_value,
+                })
+
+        left_nodes = left["nodes"]
+        right_nodes = right["nodes"]
+        left_attrs = left["attrs"]
+        right_attrs = right["attrs"]
+        left_texts = left["texts"]
+        right_texts = right["texts"]
+
+        removed_nodes = sorted(left_nodes - right_nodes)
+        added_nodes = sorted(right_nodes - left_nodes)
+        for path in removed_nodes:
+            add_item("Node removed", path)
+        for path in added_nodes:
+            add_item("Node added", path)
+
+        attr_keys = sorted(set(left_attrs) | set(right_attrs))
+        attr_added = attr_removed = attr_changed = 0
+        for key in attr_keys:
+            path, attr_name = key
+            in_left = key in left_attrs
+            in_right = key in right_attrs
+            if in_left and not in_right:
+                attr_removed += 1
+                add_item("Attribute removed", path, attr_name, left_attrs[key], "")
+            elif in_right and not in_left:
+                attr_added += 1
+                add_item("Attribute added", path, attr_name, "", right_attrs[key])
+            elif left_attrs[key] != right_attrs[key]:
+                attr_changed += 1
+                add_item("Attribute changed", path, attr_name, left_attrs[key], right_attrs[key])
+
+        text_keys = sorted(set(left_texts) | set(right_texts))
+        text_added = text_removed = text_changed = 0
+        for path in text_keys:
+            in_left = path in left_texts
+            in_right = path in right_texts
+            if in_left and not in_right:
+                text_removed += 1
+                add_item("Text removed", path, "", left_texts[path], "")
+            elif in_right and not in_left:
+                text_added += 1
+                add_item("Text added", path, "", "", right_texts[path])
+            elif left_texts[path] != right_texts[path]:
+                text_changed += 1
+                add_item("Text changed", path, "", left_texts[path], right_texts[path])
+
+        counts = {
+            "nodes_added": len(added_nodes),
+            "nodes_removed": len(removed_nodes),
+            "attrs_added": attr_added,
+            "attrs_removed": attr_removed,
+            "attrs_changed": attr_changed,
+            "texts_added": text_added,
+            "texts_removed": text_removed,
+            "texts_changed": text_changed,
+        }
+        total = sum(counts.values())
+        return {
+            "available": True,
+            "counts": counts,
+            "items": items,
+            "total": total,
+            "truncated": total > len(items),
+        }
 
     def _native_diff_command(self, left_path, right_path):
         if os.name == 'nt':
@@ -243,4 +370,3 @@ class CompareEngineMixin:
         if current_chunk:
             chunks.append(current_chunk)
         return chunks
-
