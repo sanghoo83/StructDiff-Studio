@@ -2,6 +2,8 @@
 
 StructDiff Studio is a cross-platform desktop comparator for structured files. The first release focuses on high-performance XML and HTML comparison with rule-based normalization, native diff acceleration, and interactive HTML reports.
 
+Current version: `0.2.0`
+
 ## Highlights
 
 - Compare folders or ZIP archives containing XML, HTML, and HTM files.
@@ -29,6 +31,21 @@ This project is designed as a portfolio-ready foundation for a broader structure
 - CLI mode for automation
 - Export formats such as CSV, JSON summary, and Markdown
 - Tree-based diff visualization
+
+## Source Layout
+
+```text
+src/
+  structdiff_studio.py      # Compatibility launcher
+  structdiff/
+    app.py                  # Tkinter application workflow
+    config.py               # Shared constants and versioned settings
+    engine.py               # XML normalization, hashing, and diff engine selection
+    reports.py              # HTML report and dashboard generation
+    resources.py            # Resource lookup for source and packaged builds
+    widgets.py              # Reusable Tkinter UI widgets
+    main.py                 # Application entry point
+```
 
 ## Run Locally
 
