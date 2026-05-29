@@ -2,11 +2,11 @@
 
 This directory is intentionally kept free of bundled binaries in source control.
 
-For a faster Windows build, place these files here before running `build_windows_exe.bat`:
+For a faster Windows build, place these files in `tools/windows/` before running `scripts/build_windows_exe.bat`:
 
 ```text
-tools/diff.exe
-tools/msys-2.0.dll
+tools/windows/diff.exe
+tools/windows/msys-2.0.dll
 ```
 
-StructDiff Studio still works without them by falling back to Python's built-in `difflib`.
+macOS and Linux use the system `diff` command when available. StructDiff Studio still works without native diff by falling back to Python's built-in `difflib`.

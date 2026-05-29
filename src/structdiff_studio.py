@@ -14,6 +14,7 @@ import threading
 import difflib
 import hashlib
 import itertools
+import shutil
 import subprocess
 import tempfile
 import time
@@ -59,7 +60,7 @@ INVALID_WINDOWS_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 HASH_CHUNK_SIZE = 1024 * 1024
 USE_NATIVE_DIFF_ENGINE = True
 STRUCTURAL_HASH_PREFLIGHT = True
-BUNDLED_DIFF_RELATIVE_PATH = os.path.join("tools", "diff.exe")
+WINDOWS_DIFF_RELATIVE_PATH = os.path.join("tools", "windows", "diff.exe")
 FOOTER_LOGO_RELATIVE_PATH = os.path.join("assets", "code_by_noah_logo.png")
 
 def resource_path(relative_path):
@@ -466,19 +467,15 @@ class StructDiffStudioApp:
             return False
 
     def _native_diff_command(self, left_path, right_path):
-        bundled_diff = app_resource_path(BUNDLED_DIFF_RELATIVE_PATH)
-        if os.path.exists(bundled_diff):
-            return [bundled_diff, '-U', '3', left_path, right_path]
+        if os.name == 'nt':
+            windows_diff = app_resource_path(WINDOWS_DIFF_RELATIVE_PATH)
+            if os.path.exists(windows_diff):
+                return [windows_diff, '-U', '3', left_path, right_path]
+            return None
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        local_candidates = [
-            os.path.join(script_dir, BUNDLED_DIFF_RELATIVE_PATH),
-            os.path.join(os.path.dirname(script_dir), BUNDLED_DIFF_RELATIVE_PATH),
-        ]
-        for local_diff in local_candidates:
-            if os.path.exists(local_diff):
-                return [local_diff, '-U', '3', left_path, right_path]
-
+        system_diff = shutil.which('diff')
+        if system_diff:
+            return [system_diff, '-U', '3', left_path, right_path]
         return None
 
     def _subprocess_run_kwargs(self):

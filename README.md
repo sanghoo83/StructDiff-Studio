@@ -1,6 +1,6 @@
 # StructDiff Studio
 
-StructDiff Studio is a desktop comparator for structured files. The first release focuses on high-performance XML and HTML comparison with rule-based normalization, bundled native diff acceleration, and interactive HTML reports.
+StructDiff Studio is a cross-platform desktop comparator for structured files. The first release focuses on high-performance XML and HTML comparison with rule-based normalization, native diff acceleration, and interactive HTML reports.
 
 ## Highlights
 
@@ -8,8 +8,16 @@ StructDiff Studio is a desktop comparator for structured files. The first releas
 - Normalize noisy values such as generated URLs before diffing.
 - Skip identical files with raw hash preflight.
 - Skip structurally equivalent files with normalized structural hash preflight.
-- Use a bundled `diff.exe` on Windows for faster reports, with Python `difflib` fallback.
+- Use native diff acceleration when available, with Python `difflib` fallback.
 - Generate side-by-side HTML reports and a dashboard for changed groups.
+
+## Platform Support
+
+| Platform | Status | Diff Engine |
+|---|---|---|
+| Windows | Supported | Bundled `tools/windows/diff.exe` or `difflib` fallback |
+| macOS | Supported for source run and local build | System `diff` or `difflib` fallback |
+| Linux | Planned | System `diff` or `difflib` fallback |
 
 ## Project Direction
 
@@ -34,13 +42,13 @@ Install dependencies first:
 pip install -r requirements.txt
 ```
 
-## Windows Native Diff Bundle
+## Native Diff Engines
 
-For the fastest Windows build, place these files in `tools/`:
+For the fastest Windows build, place these files in `tools/windows/`:
 
 ```text
-tools/diff.exe
-tools/msys-2.0.dll
+tools/windows/diff.exe
+tools/windows/msys-2.0.dll
 ```
 
 If `diff.exe` is missing, StructDiff Studio automatically falls back to Python's built-in `difflib`.
@@ -50,13 +58,21 @@ If `diff.exe` is missing, StructDiff Studio automatically falls back to Python's
 Run this from the project root on Windows:
 
 ```bat
-build_windows_exe.bat
+scripts\build_windows_exe.bat
 ```
 
 The executable will be created at:
 
 ```text
 dist\StructDiffStudio.exe
+```
+
+## Build macOS App
+
+Run this from the project root on macOS:
+
+```bash
+scripts/build_macos.sh
 ```
 
 ## Demo

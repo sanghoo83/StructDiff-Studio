@@ -11,9 +11,9 @@ dist/
 reports/
 DiffReport_*/
 
-tools/*.exe
-tools/*.dll
-tools/*.7z
+tools/**/*.exe
+tools/**/*.dll
+tools/**/*.7z
 
 .venv/
 venv/
