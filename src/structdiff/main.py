@@ -2,7 +2,7 @@
 StructDiff Studio
 Author: Noah Nam
 Contact: n83.noah@gmail.com
-Version: 0.4.0
+Version: 0.5.0
 Purpose: Application entry point.
 """
 
