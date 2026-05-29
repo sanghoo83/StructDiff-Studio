@@ -62,3 +62,10 @@ dist\StructDiffStudio.exe
 ## Demo
 
 Use `samples/v1` and `samples/v2` as the two folders in the app. They include a small XML change that produces a side-by-side HTML report.
+
+## Author
+
+Built by Noah Nam.
+
+- GitHub: [@sanghoo83](https://github.com/sanghoo83)
+- Email: n83.noah@gmail.com
