@@ -60,6 +60,7 @@ HASH_CHUNK_SIZE = 1024 * 1024
 USE_NATIVE_DIFF_ENGINE = True
 STRUCTURAL_HASH_PREFLIGHT = True
 BUNDLED_DIFF_RELATIVE_PATH = os.path.join("tools", "diff.exe")
+FOOTER_LOGO_RELATIVE_PATH = os.path.join("assets", "code_by_noah_logo.png")
 
 def resource_path(relative_path):
     try:
@@ -69,8 +70,18 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 def app_resource_path(relative_path):
-    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_path, relative_path)
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(script_dir, relative_path),
+        os.path.join(os.path.dirname(script_dir), relative_path),
+    ]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    return candidates[0]
 
 def draw_perfect_rounded_rect(canvas, x1, y1, x2, y2, radius, **kwargs):
     x2 -= 1; y2 -= 1
@@ -154,7 +165,7 @@ class StructDiffStudioApp:
 
     def _setup_window(self):
         self.root.title("StructDiff Studio")
-        self.root.geometry("700x700")
+        self.root.geometry("700x760")
         self.root.configure(bg=COLORS["BG_PAGE"])
         self.root.eval('tk::PlaceWindow . center')
 
@@ -270,9 +281,24 @@ class StructDiffStudioApp:
 
     def _create_footer(self):
         footer_frame = tk.Frame(self.root, bg=COLORS["BG_PAGE"])
-        footer_frame.pack(side="bottom", pady=15)
-        tk.Label(footer_frame, text="StructDiff Studio · XML/HTML diff · Native diff acceleration", bg=COLORS["BG_PAGE"], fg="#E8E8ED", font=("Helvetica", 8)).pack(pady=(0, 2))
-        tk.Label(footer_frame, text="Portfolio-ready structured comparison toolkit", bg=COLORS["BG_PAGE"], fg=COLORS["WHITE"], font=("Helvetica", 8)).pack()
+        footer_frame.pack(side="bottom", pady=(6, 12))
+        try:
+            self.footer_logo_img = tk.PhotoImage(file=app_resource_path(FOOTER_LOGO_RELATIVE_PATH))
+            tk.Label(
+                footer_frame,
+                image=self.footer_logo_img,
+                bg=COLORS["BG_PAGE"],
+                borderwidth=0,
+                highlightthickness=0
+            ).pack()
+        except Exception:
+            tk.Label(
+                footer_frame,
+                text="CODE by NOAH",
+                bg=COLORS["BG_PAGE"],
+                fg=COLORS["WHITE"],
+                font=("Helvetica", 10, "bold")
+            ).pack()
 
     def _get_xml_version(self, base_path, base_type, file_name) -> str:
         is_html = file_name.lower().endswith(('.html', '.htm'))

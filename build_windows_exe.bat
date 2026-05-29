@@ -10,6 +10,7 @@ python -m PyInstaller ^
   --onefile ^
   --windowed ^
   --name StructDiffStudio ^
+  --add-data "assets\code_by_noah_logo.png;assets" ^
   --add-binary "tools\diff.exe;tools" ^
   --add-binary "tools\msys-2.0.dll;tools" ^
   src\structdiff_studio.py
