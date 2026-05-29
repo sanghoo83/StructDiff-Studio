@@ -2,7 +2,7 @@
 
 StructDiff Studio is a cross-platform desktop comparator for structured files. The first release focuses on high-performance XML and HTML comparison with rule-based normalization, native diff acceleration, and interactive HTML reports.
 
-Current version: `0.3.0`
+Current version: `0.4.0`
 
 ## Highlights
 
@@ -12,6 +12,7 @@ Current version: `0.3.0`
 - Skip structurally equivalent files with normalized structural hash preflight.
 - Use native diff acceleration when available, with Python `difflib` fallback.
 - Classify XML/HTML changes into XPath-style node, attribute, and text summaries.
+- Ignore volatile tags, attributes, and text patterns such as timestamps, UUIDs, generated fields, and URLs.
 - Generate side-by-side HTML reports and a dashboard for changed groups.
 
 ## Platform Support

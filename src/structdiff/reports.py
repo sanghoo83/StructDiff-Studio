@@ -2,7 +2,7 @@
 StructDiff Studio
 Author: Noah Nam
 Contact: n83.noah@gmail.com
-Version: 0.3.0
+Version: 0.4.0
 Purpose: HTML dashboard and side-by-side report generation.
 """
 
@@ -243,12 +243,17 @@ class ReportWriterMixin:
         for meta in results_meta:
             status_cls = "status-diff" if meta["has_diff"] else "status-same"
             status_txt = "Differences Detected" if meta["has_diff"] else "Identical Structure"
+            action_html = (
+                "<span class='no-report'>No part report</span>"
+                if meta.get("file") == "index.html"
+                else f"<a class='view-link' href='{meta['file']}' target='_blank'>Open Part Report &rarr;</a>"
+            )
         
             rows_html.append(f"""
             <tr>
                 <td>{meta['pair']}</td>
                 <td><span class='badge {status_cls}'>{status_txt}</span></td>
-                <td><a class='view-link' href='{meta['file']}' target='_blank'>Open Part Report &rarr;</a></td>
+                <td>{action_html}</td>
             </tr>
             """)
 
@@ -270,6 +275,7 @@ class ReportWriterMixin:
                 .status-same {{ background-color: #e6ffed; color: #22863a; }}
                 .view-link {{ color: #0071E3; text-decoration: none; font-weight: bold; }}
                 .view-link:hover {{ text-decoration: underline; }}
+                .no-report {{ color: #86868B; font-size: 12px; }}
                 .floating-creator-badge {{ position: fixed; bottom: 20px; right: 20px; background-color: rgba(29, 29, 31, 0.75); color: #ffffff; padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.15); backdrop-filter: blur(4px); cursor: pointer; user-select: none; transition: all 0.2s ease-in-out; z-index: 9999; }}
                 .floating-creator-badge:hover {{ background-color: rgba(0, 113, 227, 0.95); transform: translateY(-2px); }}
             </style>

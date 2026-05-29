@@ -2,7 +2,7 @@
 StructDiff Studio
 Author: Noah Nam
 Contact: n83.noah@gmail.com
-Version: 0.3.0
+Version: 0.4.0
 Purpose: File loading, XML normalization, hashing, and diff engine selection.
 """
 
@@ -21,8 +21,10 @@ from lxml import etree
 
 from .config import (
     HASH_CHUNK_SIZE,
+    IGNORE_ATTRIBUTES,
+    IGNORE_TAGS,
+    IGNORE_TEXT_PATTERNS,
     STRUCTURAL_HASH_PREFLIGHT,
-    URL_PATTERN,
     USE_NATIVE_DIFF_ENGINE,
     WINDOWS_DIFF_RELATIVE_PATH,
     INVALID_WINDOWS_FILENAME_CHARS,
@@ -34,11 +36,19 @@ class CompareEngineMixin:
     def _local_tag_name(self, tag):
         return str(tag).split('}')[-1]
 
+    def _should_ignore_tag(self, tag_name):
+        return tag_name in IGNORE_TAGS
+
+    def _should_ignore_attribute(self, attr_name):
+        return attr_name in IGNORE_ATTRIBUTES
+
     def _normalize_text(self, text):
         if not text:
             return text
-        # Overrides http:// and https:// URLs (including IPs and ports) with a generic placeholder
-        return URL_PATTERN.sub('[IGNORED_URI]', text)
+        normalized = text
+        for pattern, replacement in IGNORE_TEXT_PATTERNS:
+            normalized = pattern.sub(replacement, normalized)
+        return normalized
 
     def _safe_report_name(self, value, max_len=120):
         safe = INVALID_WINDOWS_FILENAME_CHARS.sub('_', value).strip(' .')
@@ -130,15 +140,18 @@ class CompareEngineMixin:
                     path = "/" + "/".join(path_stack + [f"{tag_name}[{counts[tag_name]}]"])
                     path_stack.append(f"{tag_name}[{counts[tag_name]}]")
                     sibling_counts_stack.append({})
-                    nodes.add(path)
+                    ignored_tag = self._should_ignore_tag(tag_name)
+                    if not ignored_tag:
+                        nodes.add(path)
 
-                    for attr_name, attr_value in sorted(elem.attrib.items()):
-                        attrs[(path, attr_name)] = self._normalize_text(attr_value)
+                        for attr_name, attr_value in sorted(elem.attrib.items()):
+                            if not self._should_ignore_attribute(attr_name):
+                                attrs[(path, attr_name)] = self._normalize_text(attr_value)
 
                 elif event == 'end':
                     if path_stack:
                         path = "/" + "/".join(path_stack)
-                        if elem.text and elem.text.strip():
+                        if not self._should_ignore_tag(tag_name) and elem.text and elem.text.strip():
                             texts[path] = self._normalize_text(elem.text.strip())
                         path_stack.pop()
                     if len(sibling_counts_stack) > 1:
@@ -318,7 +331,7 @@ class CompareEngineMixin:
         tag_counts = [{}] 
 
         for event, elem in context:
-            tag_name = elem.tag.split('}')[-1]
+            tag_name = self._local_tag_name(elem.tag)
             if event == 'start':
                 counts = tag_counts[-1]
                 counts[tag_name] = counts.get(tag_name, 0) + 1
@@ -326,14 +339,18 @@ class CompareEngineMixin:
                 tag_counts.append({}) 
                 indent = "  " * depth
             
-                # Apply normalization masking to all attribute values
-                attrib_list = []
-                for k, v in elem.attrib.items():
-                    masked_v = self._normalize_text(v)
-                    attrib_list.append(f' {k}="{masked_v}"')
-                attribs = "".join(attrib_list)
+                if self._should_ignore_tag(tag_name):
+                    line_sink(f"{indent}<{tag_name}[{idx}] ignored=\"true\">")
+                else:
+                    attrib_list = []
+                    for k, v in elem.attrib.items():
+                        if self._should_ignore_attribute(k):
+                            continue
+                        masked_v = self._normalize_text(v)
+                        attrib_list.append(f' {k}="{masked_v}"')
+                    attribs = "".join(attrib_list)
+                    line_sink(f"{indent}<{tag_name}[{idx}]{attribs}>")
             
-                line_sink(f"{indent}<{tag_name}[{idx}]{attribs}>")
                 depth += 1
             elif event == 'end':
                 depth -= 1
@@ -341,11 +358,10 @@ class CompareEngineMixin:
                 idx = tag_counts[-1][tag_name]
                 indent = "  " * depth
             
-                # Apply normalization masking to internal node text
-                if elem.text and elem.text.strip():
+                if not self._should_ignore_tag(tag_name) and elem.text and elem.text.strip():
                     masked_text = self._normalize_text(elem.text.strip())
                     line_sink(f"{indent}  {masked_text}  ")
-                
+            
                 line_sink(f"{indent}</{tag_name}[{idx}]>")
                 elem.clear()
                 if elem.getparent() is not None:

@@ -2,11 +2,12 @@
 <Order>
   <Header>
     <OrderId>PO-10042</OrderId>
+    <RequestUuid>123e4567-e89b-12d3-a456-426614174000</RequestUuid>
     <GeneratedAt>2026-05-28T09:15:00Z</GeneratedAt>
     <Endpoint>https://old.example.com/api/orders/PO-10042</Endpoint>
   </Header>
   <Items>
-    <Item sku="A-100" quantity="2">
+    <Item sku="A-100" quantity="2" uuid="11111111-1111-4111-8111-111111111111">
       <Name>Alignment Sensor</Name>
       <Status>Ready</Status>
     </Item>
